@@ -1,13 +1,26 @@
 {
-  "name": "classifyScheduleStatistic",
+  "name": "hzy-antd",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "module": "es/index.js",
+  "files": [
+    "dist",
+    "lib",
+    "es"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tancyan/compLib.git"
+  },
+  "publishConfig": {
+    "registry": "http://scm.nicezhuanye.com/artifactory/api/npm/npm_local/"
+  },
   "scripts": {
-    "dev": "webpack-dev-server --config webpack.dev.js",
-    "build": "webpack --config webpack.prod.js",
-    "lint": "tslint -c tslint.json 'src/**/*.{ts,tsx}'",
-    "style-lint": "stylelint 'src/**/*.less'"
+    "clean": "rimraf lib",
+    "browserify": "browserify -e lib/index.js --standalone testYeomanTsNpmModule --outfile lib/test-yeoman-ts-npm-module.browser.js",
+    "build": "npm run clean && tsc && npm run browserify"
   },
   "author": "",
   "license": "ISC",
@@ -21,8 +34,7 @@
     "@types/jquery": "2.0.40",
     "@types/react-redux": "4.4.42",
     "@types/react-router": "3.0.6",
-    "@types/react-slick": "0.23.0",
-    "antd": "3.5.3",
+    "antd": "2.9.3",
     "babel-core": "6.23.1",
     "babel-loader": "7.1.2",
     "babel-plugin-import": "1.2.1",
