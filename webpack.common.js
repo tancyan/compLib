@@ -9,15 +9,11 @@ module.exports = {
             "react-dom",
             "react-router"
         ],
-        main: ["babel-polyfill", "./src/entry/Main.tsx"],
-        style:path.join(__dirname, './src/entry/style/index.less'),
-        bigData:["babel-polyfill", "./src/entry/BigData.tsx"],
-        bdStyle:path.join(__dirname,"./src/entry/style/bigDataIndex.less")
+        index: ["babel-polyfill", "./components/index.tsx"],
     },
     output: {
-        chunkFilename: "static/js/[name].[chunkhash].js",
         filename: "static/js/[name].js",
-        path: path.resolve(__dirname, "dist"),
+        path: path.resolve(__dirname, "lib"),
     },
     module: {
         rules: [
@@ -27,7 +23,7 @@ module.exports = {
             },
             {
                 test: /\.js?$/,
-                exclude: /node_modules|dist/,
+                exclude: /node_modules|lib/,
                 loader: "babel-loader",
             },
             {

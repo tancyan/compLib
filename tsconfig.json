@@ -1,37 +1,21 @@
 {
     "compilerOptions": {
-
-        "module": "es6",
-
-        "target": "es6",
-
+        "strictNullChecks": true,
         "moduleResolution": "node",
-
-        "lib": ["es6", "dom"],
-
-        "allowJs": true,
-
-        "noImplicitAny": false,
-        "sourceMap": false,
-        "jsx": "react",
-
-        "allowUnreachableCode": true,
-
         "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
-        "allowSyntheticDefaultImports": true,
-
-        "outDir": "lib",
-        "pretty": true,
-        "reactNamespace": "React"
+        "jsx": "preserve",
+        "noUnusedParameters": true,
+        "noUnusedLocals": true,
+        "noImplicitAny": true,
+        "target": "es6",
+        "lib": [
+            "dom",
+            "es7"
+        ]
     },
-    "files": [
-        "Components/index.ts"
-    ],
     "exclude": [
         "node_modules",
-        "typings",
         "lib",
-        "nicezhuanye_frontend_common"
+        "es"
     ]
 }

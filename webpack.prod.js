@@ -8,9 +8,9 @@ var theme = getThemeConfig();
 
 
 module.exports = webpackMerge(commonConfig, {
-    devtool: "source-map",
+   // devtool: "source-map",
     output: {
-        publicPath: "./dist/",
+        publicPath: "./lib/",
     },
     module: {
         rules: [
@@ -22,7 +22,7 @@ module.exports = webpackMerge(commonConfig, {
                     }, {
                         loader: "less-loader",
                         options: {
-                            sourceMap: true,
+                            sourceMap: false,
                             modifyVars: theme
                         },
                     }],
@@ -33,29 +33,11 @@ module.exports = webpackMerge(commonConfig, {
         ],
     },
     plugins: [
-        new cleanWebpackPlugin(["dist"]),
+        new cleanWebpackPlugin(["lib"]),
         new webpack.DefinePlugin({
             "process.env": {
                 NODE_ENV: JSON.stringify("production"),
             },
         }),
-
-       /* new htmlWebpackPlugin({
-            favicon: "./vendor/favicon.ico",
-           /!* minify: {
-                collapseBooleanAttributes: true,
-                collapseInlineTagWhitespace: true,
-                collapseWhitespace: true,
-                // ignoreCustomComments: true,
-                removeComments: true,
-                removeRedundantAttributes: true,
-                removeScriptTypeAttributes: true,
-                removeStyleLinkTypeAttributes: true,
-                // keepClosingSlash: true,
-                useShortDoctype: true,
-            },
-            template: "./index.html",*!/
-            title: "Production",
-        }),*/
     ],
 })
