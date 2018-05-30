@@ -208,4 +208,6 @@ function compile(modules) {
 gulp.task('compile', () => {
   compile();
 });
-
+gulp.task('compile-with-es', () => {
+  compile(false);
+});

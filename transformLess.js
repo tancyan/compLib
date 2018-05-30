@@ -4,6 +4,8 @@ const path = require('path');
 const postcss = require('postcss');
 const NpmImportPlugin = require('less-plugin-npm-import');
 const postcssConfig = require('./postcssConfig');
+var getThemeConfig = require('./theme');
+var theme = getThemeConfig();
 
 function transformLess(lessFile, config = {}) {
   const { cwd = process.cwd() } = config;
@@ -16,6 +18,7 @@ function transformLess(lessFile, config = {}) {
   const lessOpts = {
     paths: [path.dirname(resolvedLessFile)],
     filename: resolvedLessFile,
+    modifyVars: theme,
     plugins: [
       new NpmImportPlugin({ prefix: '~' }),
     ],
