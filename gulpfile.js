@@ -61,11 +61,6 @@ function dist(done) {
   });
 }
 
-gulp.task('clean', () => {
-  rimraf.sync(path.join(cwd, '_site'));
-  rimraf.sync(path.join(cwd, '_data'));
-});
-
 gulp.task('dist', (done) => {
   dist(done);
 });
@@ -208,6 +203,18 @@ function compile(modules) {
 gulp.task('compile', () => {
   compile();
 });
-gulp.task('compile-with-es', () => {
-  compile(false);
+gulp.task('pub', ['compile','dist'], (done) => {
+    pub(done);
 });
+
+function publish(done) {
+    let args = ['publish', '--with-antd-tools'];
+    if (tagString) {
+        args = args.concat(['--tag', tagString]);
+    }
+    const publishNpm = process.env.PUBLISH_NPM_CLI || 'npm';
+    runCmd(publishNpm, args, (code) => {
+        tag();
+        done(code);
+    });
+}

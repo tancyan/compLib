@@ -22,8 +22,12 @@ export default class NormalTable extends React.Component<INormalTableProps, INor
 
     render() {
         const {dataSource = [], columns, className} = this.props;
-        const tableCls = classNames("default-table", className);
-        const pagination = {pageSize: 10, total: dataSource.length, showTotal: (num: number) => `共${num}条`};
+        let {pagination} = this.props;
+        const tableCls = classNames({
+            "default-table": true,
+            [className]: !!className
+        });
+        pagination = pagination || {pageSize: 10, total: dataSource.length, showTotal: (num: number) => `共${num}条`};
         return <Table
             className={tableCls}
             dataSource = {dataSource}

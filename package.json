@@ -1,6 +1,6 @@
 {
   "name": "hzy-antd",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -14,10 +14,8 @@
   "scripts": {
     "tsc": "tsc",
     "clean": "rimraf lib",
-    "webpackBuild": "webpack --config webpack.prod.js",
     "browserify": "browserify -e lib/index.js --standalone testYeomanTsNpmModule --outfile lib/test-yeoman-ts-npm-module.browser.js",
-    "build": "npm run clean && tsc && npm run browserify",
-    "webpackBuild": "webpack --config webpack.prod.js"
+    "build": "npm run clean && tsc && npm run browserify"
   },
   "author": "tancyan",
   "license": "ISC",

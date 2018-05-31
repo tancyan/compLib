@@ -6,6 +6,8 @@ const deepAssign = require('deep-assign');
 const chalk = require('chalk');
 const replaceLib = require('./replaceLib');
 const postcssConfig = require('./postcssConfig');
+var getThemeConfig = require('./theme');
+var theme = getThemeConfig();
 
 module.exports = function (modules) {
   const pkg = require(path.join(process.cwd(), 'package.json'));
@@ -142,6 +144,7 @@ module.exports = function (modules) {
                 loader: 'less-loader',
                 options: {
                   sourceMap: true,
+                  modifyVars: theme
                 },
               },
             ],
@@ -210,7 +213,7 @@ All rights reserved.
           warnings: false,
         },
       }),
-      new webpack.optimize.ModuleConcatenationPlugin(),
+     // new webpack.optimize.ModuleConcatenationPlugin(),
       new webpack.LoaderOptionsPlugin({
         minimize: true,
       }),
