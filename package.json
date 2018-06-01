@@ -1,9 +1,14 @@
 {
   "name": "hzy-antd",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
+  "files": [
+    "dist",
+    "lib",
+    "es"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/tancyan/compLib.git"
