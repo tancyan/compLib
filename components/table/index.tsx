@@ -2,7 +2,6 @@ import * as React from "react";
 import {Table} from "antd";
 import { TableProps } from "antd/lib/table/Table";
 import classNames from "classnames";
-import "./style/index";
 
 export interface INormalTableProps extends TableProps<any> {
 }
@@ -28,7 +27,7 @@ export default class NormalTable extends React.Component<INormalTableProps, INor
             [className]: !!className,
             "default-table": true
         });
-        pagination = pagination || {pageSize: 10, total: dataSource.length, showTotal: (num: number) => `共${num}条`};
+        pagination = typeof pagination !== "undefined" ? pagination : {pageSize: 10, total: dataSource.length, showTotal: (num: number) => `共${num}条`};
         return <Table
             className={tableCls}
             dataSource = {dataSource}

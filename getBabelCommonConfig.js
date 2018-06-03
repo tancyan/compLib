@@ -8,6 +8,13 @@ module.exports = function (modules) {
     require.resolve('babel-plugin-transform-class-properties'),
     require.resolve('babel-plugin-transform-object-rest-spread'),
   ];
+
+  // antd按需加载
+  plugins.push([require.resolve('babel-plugin-import'),{
+      style: true,
+      libraryName: "antd",
+  }]);
+
   plugins.push([require.resolve('babel-plugin-transform-runtime'), {
     polyfill: false,
   }]);
