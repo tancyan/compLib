@@ -1,13 +1,11 @@
 {
   "name": "hzy-antd",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
-    "dist",
-    "lib",
-    "es"
+    "lib"
   ],
   "repository": {
     "type": "git",
@@ -17,7 +15,7 @@
     "registry": "http://scm.nicezhuanye.com/artifactory/api/npm/npm_local/"
   },
   "scripts": {
-
+    "test": "webpack-dev-server --config webpack.test.js"
   },
   "author": "tancyan",
   "license": "ISC",

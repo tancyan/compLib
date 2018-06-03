@@ -1,4 +1,5 @@
 declare module "classnames";
+declare module "object-assign";
 declare module "*.json" {
   const value: any;
   export const version: string;

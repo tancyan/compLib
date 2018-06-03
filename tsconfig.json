@@ -1,20 +1,33 @@
 {
     "compilerOptions": {
-        "strictNullChecks": true,
-        "moduleResolution": "node",
-        "experimentalDecorators": true,
-        "jsx": "preserve",
-        "noUnusedParameters": true,
-        "noUnusedLocals": true,
-        "noImplicitAny": true,
+
+        "module": "es6",
+
         "target": "es6",
-        "lib": [
-            "dom",
-            "es7"
-        ]
+
+        "moduleResolution": "node",
+
+        "lib": ["es6", "dom"],
+
+        "allowJs": true,
+
+        "noImplicitAny": false,
+        "sourceMap": true,
+        "jsx": "react",
+
+        "allowUnreachableCode": true,
+
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "allowSyntheticDefaultImports": true,
+
+        "outDir": "dist",
+        "pretty": true,
+        "reactNamespace": "React"
     },
     "exclude": [
         "node_modules",
-        "lib"
+        "typings",
+        "dist"
     ]
 }

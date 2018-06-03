@@ -18,8 +18,10 @@
         .ant-table-thead tr th,.ant-table-tbody tr td{
             padding: 0px;
             text-align: center;
-            border-right-color: @colorGrayLight;
-            border-bottom-color: @colorGrayLight;
+            &:not(:last-child) {
+                border-right: 1px solid @colorGrayLight;
+                border-bottom: 1px solid @colorGrayLight;
+            }
             position: relative;
             &>div{
                 display: block;
@@ -50,6 +52,13 @@
 
         .ant-table-tbody tr{
             text-align: center;
+
+            &:nth-child(odd){ //奇数行
+                background-color:#f2f2f2;
+            }
+            &:nth-child(even){ //偶数行
+                background-color:#FFFFFF;
+            }
 
             &:last-child{
                 td{

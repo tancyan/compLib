@@ -6,8 +6,8 @@ const assign = require('object-assign');
 
 module.exports = function () {
   let my = {};
-  if (fs.existsSync(path.join(process.cwd(), 'tsconfig.json'))) {
-    my = require(path.join(process.cwd(), 'tsconfig.json'));
+  if (fs.existsSync(path.join(process.cwd(), 'compileTsconfig.json'))) {
+    my = require(path.join(process.cwd(), 'compileTsconfig.json'));
   }
   return assign({
     noUnusedParameters: true,
