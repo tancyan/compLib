@@ -3,6 +3,12 @@ import {Row, Col} from "antd";
 import "../../components/table/style/index";
 import Table from "../../components/table";
 
+import "../../components/card/style/index";
+import Card from "../../components/card";
+
+import "../../components/button/style/index";
+import Button from "../../components/button";
+
 export interface ITestProps {
 }
 
@@ -50,6 +56,19 @@ export default class Test extends React.Component<ITestProps, ITestState> {
         return (
             <Row gutter={20}>
                 <Col span={8}><Table dataSource={dataSource} columns={columns} /></Col>
+                <Col span={8}>
+                    <Card title="Card title">
+                        <p>Card content</p>
+                        <p>Card content</p>
+                        <p>Card content</p>
+                    </Card>
+                </Col>
+                <Col span={8}>
+                    <Button heightSize={"xxl"}>xxl</Button>
+                    <Button heightSize={"lg"}>lg</Button>
+                    <Button heightSize={"sm"}>sm</Button>
+                    <Button heightSize={"xs"}>xs</Button>
+                </Col>
             </Row>
         );
     }
