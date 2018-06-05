@@ -5,3 +5,5 @@ export {default as Menu} from "./menu";
 export {default as ChartSlick} from "./chartSlick";
 export {default as Icon} from "./icon";
 export {default as Card} from "./card";
+export {default as Util} from "./util";
+export {default as MenuUtil} from "./menuUtil";

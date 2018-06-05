@@ -1,0 +1,87 @@
+// 菜单样式
+@menu-backColor:#263346; // 菜单背景色
+@menu-child: #263346; // 子菜单展开颜色
+@menu-select: #F9A803; // 子菜单选中颜色
+.menu-wrap {
+    .ant-menu{
+        position: relative;
+        &:after{
+            position: absolute;
+            top: 0;
+            right: -1px;
+            width: 3px;
+            height: 100%;
+            background: @menu-backColor;
+            content: ' ';
+            z-index: 100;
+        }
+    }
+    .ant-menu-item-active,.ant-menu-item:hover{
+        color: #fff;
+    }
+
+    .ant-menu, .ant-menu-submenu-active {
+        background: @menu-child;
+        color: #fff;
+    }
+
+    .ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected {
+        color: @menu-select;
+        background: @menu-child;
+        a{
+            color: @menu-select;
+        }
+        .dot {
+            background: @menu-select;
+        }
+    }
+
+    .ant-menu-dark .ant-menu-inline.ant-menu-sub {
+        background: @menu-child;
+    }
+
+    .ant-menu-item-active a {
+        color: #fff;
+    }
+
+    .ant-menu-submenu-title:hover {
+        color: #fff;
+    }
+
+    .menuItem {
+        margin-right: 7px;
+        width: 27px;
+        vertical-align: middle;
+        + span {
+            vertical-align: middle;
+            font-size: 16px;
+        }
+    }
+
+    .ant-menu-submenu-inline {
+        > .ant-menu-submenu-title:after {
+            top: 3px;
+            font-size: 22px;
+        }
+    }
+
+    .dot {
+        position: absolute;
+        top: 40%;
+        left: 15%;
+        height: 6px;
+        float: left;
+        width: 6px;
+        border-radius: 100%;
+        background: #fff;
+    }
+    .second-title {
+        margin-left: 10px;
+        font-size: 14px;
+    }
+
+    .ant-menu-item a {
+        color: #fff;
+        font-size: 14px;
+    }
+}

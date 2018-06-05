@@ -9,6 +9,11 @@ import Card from "../../components/card";
 import "../../components/button/style/index";
 import Button from "../../components/button";
 
+import "../../components/menu/style/index";
+import Menu from "../../components/menu";
+import {RegMenu} from "../../typings/regMenu";
+import IMenu = RegMenu.IMenu;
+
 export interface ITestProps {
 }
 
@@ -53,23 +58,51 @@ export default class Test extends React.Component<ITestProps, ITestState> {
             key: "address",
         }];
 
+        const menuConfig = [
+            {
+                id: "1",
+                name: "分班统计分析",
+                icon: "",
+                type: "branch",
+                subMenus: [
+                    {
+                        name: "行政班班级数据",
+                        id: "1_1",
+                        type: "leaf",
+                        url: ""
+                    },
+                    {
+                        name: "教学班班级数据",
+                        id: "1_2",
+                        type: "leaf",
+                        url: ""
+                    }
+                ]
+            }
+        ] as IMenu[];
+
         return (
-            <Row gutter={20}>
-                <Col span={8}><Table dataSource={dataSource} columns={columns} /></Col>
-                <Col span={8}>
-                    <Card title="Card title">
-                        <p>Card content</p>
-                        <p>Card content</p>
-                        <p>Card content</p>
-                    </Card>
-                </Col>
-                <Col span={8}>
-                    <Button heightSize={"xxl"}>xxl</Button>
-                    <Button heightSize={"lg"}>lg</Button>
-                    <Button heightSize={"sm"}>sm</Button>
-                    <Button heightSize={"xs"}>xs</Button>
-                </Col>
-            </Row>
+            <div>
+                <Row gutter={20}>
+                    <Col span={8}><Table dataSource={dataSource} columns={columns} /></Col>
+                    <Col span={8}>
+                        <Card title="Card title">
+                            <p>Card content</p>
+                            <p>Card content</p>
+                            <p>Card content</p>
+                        </Card>
+                    </Col>
+                    <Col span={8}>
+                        <Button heightSize={"xxl"}>xxl</Button>
+                        <Button heightSize={"lg"}>lg</Button>
+                        <Button heightSize={"sm"}>sm</Button>
+                        <Button heightSize={"xs"}>xs</Button>
+                    </Col>
+                </Row>
+                <Row gutter={20}>
+                    <Col span={8}><Menu menus={menuConfig} mode={"inline"} menuInfo={{openKeys: ["1"], selectedKeys: ["1_1"]}} /></Col>
+                </Row>
+            </div>
         );
     }
 }
