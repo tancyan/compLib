@@ -46,7 +46,9 @@ export default class SystemMenu extends React.Component<ISystemMenuProps, ISyste
         const secondItem = firstItem.subMenus && firstItem.subMenus[0];
         const {id: selectedKey} = secondItem;
         const menuInfo = {openKeys: [openKey], selectedKeys: [selectedKey]} as IMenuInfo;
-        menuClick(menuInfo, secondItem.url);
+        if (menuClick !== undefined) {
+            menuClick(menuInfo, secondItem.url);
+        }
        // router.push({pathname: secondItem.url});
        // actions.changeMenu(menuInfo);
     }
@@ -58,7 +60,10 @@ export default class SystemMenu extends React.Component<ISystemMenuProps, ISyste
         openKeys = [openKeys];
         selectedKeys = [selectedKeys];
         const menuInfo = {openKeys, selectedKeys} as IMenuInfo;
-        this.props.menuClick(menuInfo);
+        const {menuClick} = this.props;
+        if (menuClick !== undefined) {
+            menuClick(menuInfo);
+        }
         // this.props.actions.changeMenu(menuInfo);
     }
     getMenu = () => {

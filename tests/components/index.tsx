@@ -9,8 +9,9 @@ import Card from "../../components/card";
 import "../../components/button/style/index";
 import Button from "../../components/button";
 
-import "../../components/menu/style/index";
 import Menu from "../../components/menu";
+import "../../components/menu/style/index";
+
 import {RegMenu} from "../../typings/regMenu";
 import IMenu = RegMenu.IMenu;
 
