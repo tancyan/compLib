@@ -12,6 +12,7 @@ export default class StepMenuUtil {
     private menuIDMap: any; // 以menuID为key的menuMap
     private urlMenuMap: any; // 以 url 为key的menuMap
     private progressLevel: number | 0; // progress指定第几级菜单 0为默认，0代表一级 如排课指定二级菜单、分班云计算指定一级菜单，二级菜单不显示
+    private calculatedLeafStep = 0; // 计算叶子节点个数
     util = new Util();
 
     static getInstance() {
@@ -23,6 +24,7 @@ export default class StepMenuUtil {
     // 初使化菜单配置
     initMenus(menus, progressLevel) {
         this.menus = menus;
+        this.calculatedLeafStep = 0;
         const combMap = this.getMenuIDMap(menus);
         const {ids, urls} = combMap;
         this.menuIDMap = ids;
@@ -40,10 +42,11 @@ export default class StepMenuUtil {
             const menu = menus[i];
             const {id, subMenus, type , url} = menu;
             const menuNew = objectAssign(menu, {step: i + 1, parentMenuID});
-            map.ids[id] = menuNew;
             if (url && type === "leaf") {
                 map.urls[url] = menuNew;
+                menuNew["calculatedLeafStep"] = ++ t.calculatedLeafStep;
             }
+            map.ids[id] = menuNew;
             if (subMenus && subMenus.length > 0) {
                 map = t.getMenuIDMap(subMenus, map, id);
             }
@@ -253,17 +256,18 @@ export default class StepMenuUtil {
      * @returns {StepMenu.IMenuNode}
      */
     getPreNexMenuNode(stateTreeMenuInfo: IMenuNode, stepS: number) {
+        const t = this;
         const menuIDMap = this.menuIDMap;
         const menuInfo = this.getMenuByMenuNode(stateTreeMenuInfo);
-        let { step} = menuInfo;
+        let { calculatedLeafStep} = menuInfo;
         let menuID = menuInfo.id;
-        if ( step > 1 ) {
-            step += stepS;
+        if ( calculatedLeafStep > 1 ) {
+            calculatedLeafStep += stepS;
         }
 
         for ( const key in menuIDMap ) {
-            if (menuIDMap.hasOwnProperty(key) && menuIDMap[key] === step) {
-                menuID = menuIDMap[key].step;
+            if (menuIDMap.hasOwnProperty(key) && menuIDMap[key]["calculatedLeafStep"] === calculatedLeafStep) {
+                menuID = menuIDMap[key].id;
                 break;
             }
         }
@@ -345,17 +349,17 @@ export default class StepMenuUtil {
         return menuNode;
     }
 
+    // 根据状态数上的菜单信息，推导出下一步的progress
     getNextProgress( menuInfo: IMenuInfo ) {
         let progress = "";
-        const { activeMenuInfo, curMenuInfo } = menuInfo;
+        let { activeMenuInfo} = menuInfo;
 
-        const activeStep = this.getMenuByMenuNode(activeMenuInfo);
-        const curStep = this.getMenuByMenuNode(curMenuInfo);
+        const activeMenu = this.getMenuByMenuNode(activeMenuInfo);
+        const curMenu = this.getMenuByMenuNode(menuInfo.curMenuInfo);
 
-        if( curStep === activeStep ){
-            activeMenuInfo = getNextMenuStepInfo( activeMenuInfo );
-
-            progress = getProcessByActiveMenuInfo( activeMenuInfo );
+        if (activeMenu.calculatedLeafStep === curMenu.calculatedLeafStep) {
+            activeMenuInfo = this.getNextStepMenuNode( activeMenuInfo );
+            progress = this.getProcessByActiveMenuInfo( activeMenuInfo );
         }
         return progress;
     }
@@ -383,31 +387,6 @@ export function getFirstActiveMenuInfo():MenuNode{
     }
 
     return menuNode;
-}
-
-
-/**
- * 获取下一步的progress
- */
-
-export function getNextProgress( classifyMenuInfo ){
-    var progress = '';
-
-    var { activeMenuInfo, curMenuInfo } = classifyMenuInfo;
-
-    var activeStep = getStepByMenuNode( activeMenuInfo );
-    var curStep = getStepByMenuNode( curMenuInfo );
-
-    if( curStep === activeStep ){
-        activeMenuInfo = getNextMenuStepInfo( activeMenuInfo );
-
-        progress = getProcessByActiveMenuInfo( activeMenuInfo );
-    }
-    /*else if( curStep > activeStep ){
-        activeMenuInfo = getNextMenuStepInfo( curMenuInfo );
-    }*/
-
-    return progress;
 }
 
 /**
