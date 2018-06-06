@@ -133,4 +133,38 @@ export class Util {
         }
         return hash;
     }
+
+    getIndex( ary: any[], cb: Function): number {
+        let idx = -1;
+        const len = ary && ary.length || 0;
+
+        for ( let i = 0 ; i < len; i++ ) {
+            if ( cb(ary[i], i) ) {
+                idx = i;
+                break;
+            }
+        }
+        return idx;
+    }
+
+    // 获取对象
+    recursiveObj(source, searchKeys: string, symbol: string  = "|") {
+
+        if ( source ) {
+            const searchKeysArr = searchKeys.split(symbol);
+            const len = searchKeysArr && searchKeysArr.length || 0;
+            for (let i = 0 ; i < len; i++ ) {
+                if ( source) {
+                    source = source[searchKeysArr[i]];
+                } else {
+                    source = undefined;
+                    break;
+                }
+            }
+        } else {
+            source = undefined;
+        }
+
+        return source;
+    }
 }

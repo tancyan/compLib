@@ -1,8 +1,17 @@
 import {Util} from "../util/index";
+import objectAssign from "object-assign";
+import {StepMenu} from "../../typings/stepMenu";
+import IMenu = StepMenu.IMenu;
+import IMenuInfo = StepMenu.IMenuInfo;
+import IMenuNode = StepMenu.IMenuNode;
 
 export default class StepMenuUtil {
     // 初始化配置文件的菜单对象：
     static instance: StepMenuUtil;
+    private menus: IMenu[]; // 传入的菜单配置
+    private menuIDMap: any; // 以menuID为key的menuMap
+    private urlMenuMap: any; // 以 url 为key的menuMap
+    private progressLevel: number | 0; // progress指定第几级菜单 0为默认，0代表一级 如排课指定二级菜单、分班云计算指定一级菜单，二级菜单不显示
     util = new Util();
 
     static getInstance() {
@@ -12,230 +21,344 @@ export default class StepMenuUtil {
         return StepMenuUtil.instance;
     }
     // 初使化菜单配置
-    setMenus(menus) {
+    initMenus(menus, progressLevel) {
         this.menus = menus;
+        const combMap = this.getMenuIDMap(menus);
+        const {ids, urls} = combMap;
+        this.menuIDMap = ids;
+        this.urlMenuMap = urls;
+        this.progressLevel = progressLevel;
     }
     getMenus() {
         return this.menus;
     }
 
-    /**
-     * 获取一级菜单 二级菜单列表
-     * @returns {any[]}
-     */
-    handleMenuStruct(): any[] {
+    // menus 以 menuID 为key 的 menu信息 {id:{}, url:{}}
+    getMenuIDMap(menus: IMenu[], map= {ids: {}, urls: {}} , parentMenuID = "") {
+        const t = this;
+        for ( let i = 0; i < menus.length; i++) {
+            const menu = menus[i];
+            const {id, subMenus, type , url} = menu;
+            const menuNew = objectAssign(menu, {step: i + 1, parentMenuID});
+            map.ids[id] = menuNew;
+            if (url && type === "leaf") {
+                map.urls[url] = menuNew;
+            }
+            if (subMenus && subMenus.length > 0) {
+                map = t.getMenuIDMap(subMenus, map, id);
+            }
+        }
+        return map;
+    }
 
-        // 获取context里面存储的 classifyMenus
-        //let menuCache = getMenuCache();
-        let classifyMenus = getClassifyTypeIDMenuCacheData(MENUKEYMAP.classifyMenus)//menuCache[MENUKEYMAP.classifyMenus];
+    // 是否有子菜单
+    hasSubMenu( menuID: string): boolean {
+        const menuIDMap = this.menuIDMap;
+        const menuInfo: IMenu = menuIDMap[ menuID ];
+        const {type} = menuInfo;
+        return type === "branch";
+    }
 
-        if( isEmptyObject(classifyMenus) ){
-            var entry = getEntry();
-            var { subMenu } = entry;
-            var i  = 0, len = subMenu && subMenu.length || 0;
-            let classifyMenusNew = [];
-            for( ; i < len; i++ ){
-                var { menuID,step, subMenuStepByStep, showStep } = subMenu[ i ];
-                var menuInfo = getMenuInfoAccordingMenuID( menuID );
-                if( menuInfo ){
-                    menuInfo.step = step;
-                    menuInfo.subMenuStepByStep = subMenuStepByStep;
-                    menuInfo.showStep = showStep;
-                    classifyMenusNew.push( menuInfo );
+    // 是否在菜单栏中显示子菜单
+    hasSubMenuAndShow( menuID: string ): boolean {
+        const menuIDMap = this.menuIDMap;
+        const menuInfo: IMenu = menuIDMap[ menuID ];
+        const {type, displaySubMenu} = menuInfo;
+        return type === "branch" && displaySubMenu;
+    }
+
+    // 获取传入菜单的状态，1：是否可点击 2：是否是当前路由所在菜单
+    getMenuItemStatus(menu: IMenu, stateMenuInfo: IMenuInfo) {
+        const t = this;
+        let {activeMenuInfo, curMenuInfo} = stateMenuInfo;
+        const {id} = menu;
+        // 当前menu的steps
+        const menuLevelSteps = this.getLevelStepsByMenuID(id);
+        let activeMenuID;
+        let curMenuID;
+        const activeMenuIDs = [];
+
+        while (activeMenuInfo) {
+            activeMenuID = activeMenuInfo.menuID;
+            activeMenuInfo = activeMenuInfo.subMenuInfo;
+            activeMenuIDs.push( activeMenuID );
+        }
+
+        while (curMenuInfo) {
+            curMenuID = curMenuInfo.menuID;
+            curMenuInfo = curMenuInfo.subMenuInfo;
+        }
+
+        // 当前progress所在的steps
+        const activeLevelSteps = this.getLevelStepsByMenuID( activeMenuID );
+        // 当前路由所在的steps
+        const curLevelSteps = this.getLevelStepsByMenuID( curMenuID );
+
+        const activeSteps = activeLevelSteps.join(",");
+        const curSteps = curLevelSteps.join(",");
+        const menuSteps = menuLevelSteps.join(",");
+
+        const isNotSubMenuStepByStep = () => { // 5_2>5_1 需要判断 subMenuStepByStep
+            let isActive2 = false;
+            const len = Math.min( activeLevelSteps.length, menuLevelSteps.length );
+            let equFirstIdx = -1; // 一级菜单index
+
+            for ( let i = 0 ; i < len; i++ ) {
+                if ( activeLevelSteps[i] === menuLevelSteps[i] ) {
+                    equFirstIdx = i;
+                } else {
+                    break;
                 }
             }
+            if ( equFirstIdx !== -1 ) {
+                const activeMenuID2 = activeMenuIDs[ equFirstIdx ];
+                const sameFirstMenu = t.menus.find(menuC => menuC.id === activeMenuID2);
+                isActive2 = sameFirstMenu.subMenuStepByStep;
+            }
 
-            setClassifyTypeIDMenuCacheData(MENUKEYMAP.classifyMenus,classifyMenusNew);
-            //menuCache[MENUKEYMAP.classifyMenus] = classifyMenusNew;
+            return isActive2;
+        };
 
-            return classifyMenusNew;
+        const isActive = menuSteps <= activeSteps || isNotSubMenuStepByStep();
+        // 如果包含的话
+        const isCur = curSteps.indexOf(menuSteps) === 0;
+        return { isActive, isCur };
+    }
 
-        }
-
-        return classifyMenus;
-}
-
-/**
- * 组装子菜单
- * @param menuID
- * @returns {null}
- */
-function getMenuInfoAccordingMenuID( menuID:string ){
-    //原始数据：
-    let MenuIDMap = getMenuIDMap();
-
-    var menuIDInfo = MenuIDMap[ menuID ];
-    var menuInfo = null;
-
-    if( isMenuExist(menuID) ){
-        if( menuIDInfo ){
-            let displayName = menuIDInfo["displayName"];
-            let arrow = menuIDInfo["arrow"];
-            let step = menuIDInfo["step"];
-            let menuType = menuIDInfo["menuType"];
-            let subMenuClassName = menuIDInfo["subMenuClassName"];
-            let parentMenuID = menuIDInfo["parentMenuID"];
-            let showStep = menuIDInfo["showStep"];
-            let displaySubMenu = menuIDInfo["displaySubMenu"];
-            //var { displayName, arrow, step, menuType, subMenuClassName,parentMenuID, showStep,displaySubMenu } = menuIDInfo;
-            menuInfo = { parentMenuID, menuID, displayName, menuType,arrow, showStep, step, subMenuClassName,displaySubMenu };
-
-            if( hasSubMenu(menuID) ){
-                menuInfo.subMenu = getSubMenuInfo( menuID );
-            } else {
-                menuInfo.url = menuIDInfo["url"];
+    // 根据menuID获取step的数组 1_2 ：1级菜单下的第一个菜单的子菜单中的第2个菜单
+    getLevelStepsByMenuID( menuID ) {
+        let levelSteps = [];
+        if ( menuID ) {
+            const menuIDMap = this.menuIDMap;
+            let menuInfo: IMenu = menuIDMap[menuID];
+            const {step, parentMenuID} = menuInfo;
+            if (menuInfo) {
+                levelSteps.push(step);
+            }
+            while (parentMenuID) {
+                menuInfo = menuIDMap[parentMenuID];
+                levelSteps.push( menuInfo.step );
             }
         }
-        return menuInfo;
+        levelSteps = levelSteps.reverse();
+        return levelSteps;
     }
-}
 
-//判断菜单存在的工具方法：
-function isMenuExist( menuID:string ){
-    return true;
-}
+    // 根据url获取菜单节点信息
+    getMenuNodeByUrl( url ): IMenuNode {
+        let menuNode: IMenuNode;
+        if (url) {
+            const urlMenuMap = this.urlMenuMap;
+            const menuInfo: IMenu = urlMenuMap && urlMenuMap[url];
+            const {id, parentMenuID} = menuInfo;
 
-export function hasSubMenu( menuID:string ):boolean{
+            if (menuInfo) {
+                // 根据menuID找到对应的menuIDs
+                const menuIDs = this.getMenuIDsByMenuID(id);
+                let refMenuNode;
+                for ( let i = 0, len = menuIDs.length; i < len; i++ ) {
+                    if (!refMenuNode) {
+                        menuNode = { menuID: menuIDs[i] };
+                        refMenuNode = menuNode;
+                    } else {
+                        // todo 此处不满足3级菜单
+                        if (!refMenuNode) {
+                            menuNode = { menuID: menuIDs[i] };
+                            refMenuNode = menuNode;
+                        } else {
+                            refMenuNode = refMenuNode["subMenuInfo"] = {menuID: menuIDs[i]};
+                        }
+                    }
+                }
+            }
+        }
+        return menuNode;
+    }
 
-    let MenuIDMap = getMenuIDMap();
-    var menuInfo = MenuIDMap[ menuID ];
-    var menuType = menuInfo && menuInfo["menuType"] || "";
-    var hasSubMenu = menuType === "branch";
-    return hasSubMenu
-}
+    // 根据 progress 获取当前的menu节点
+    getMenuNodeByProgress( progress ): IMenuNode {
+        const menuIDMap = this.menuIDMap;
+        let menuKey;
+        let menuInfo: IMenu;
+        for (const key in menuIDMap) {
+            if (menuIDMap.hasOwnProperty(key)) {
+                const tmpMenuInfo: IMenu = menuIDMap[key];
+                const {progressName} = tmpMenuInfo;
+                if (progressName === progress) {
+                    menuInfo = tmpMenuInfo;
+                    menuKey = key;
+                    break;
+                }
+            }
+        }
+        const menuNode = {menuID: menuKey};
+        if (menuInfo.type === "branch") { // 含有子菜单
+            menuNode["subMenuInfo"] = menuInfo.subMenus[0].id;
+        }
+        return menuNode;
+    }
 
-export function hasSubMenuAndShow( menuID:string ):boolean{
-    let MenuIDMap = getMenuIDMap();
+    // 根据menuID获取menuIDs列表，顺序为1级 2级……
+    getMenuIDsByMenuID(menuID): string[] {
+        const menuIDMap = this.menuIDMap;
+        let menuInfo: IMenu = menuIDMap && menuIDMap[menuID];
+        if (menuInfo) {
+            let menuIDs = [menuID];
+            const {parentMenuID} = menuInfo;
+            while (parentMenuID) {
+                menuIDs.push(parentMenuID);
+                menuInfo = menuIDMap[parentMenuID];
+            }
+            menuIDs = menuIDs.reverse();
+            return menuIDs;
+        } else {
+            return null; // 不存在的menuID
+            console.log("不存在的menuID=" + menuID);
+        }
+    }
 
-    var menuInfo = MenuIDMap[ menuID ];
-    var menuType = menuInfo && menuInfo["menuType"] || "";
-    var hasSubMenu = menuType === "branch" && menuInfo["displaySubMenu"];
-    return hasSubMenu
-}
+    // 根据menuID获取菜单节点
+    getMenuNodeByMenuID( menuID ): IMenuNode {
 
+        // 根据menuID找到对应的menuIDs
+        const menuIDs = this.getMenuIDsByMenuID(menuID);
+        let menuNode;
+        if (menuIDs) {
+            let refMenuNode;
+            for ( let i = 0, len = menuIDs.length; i < len; i++ ) {
+                if ( !refMenuNode ) {
+                    menuNode = { menuID: menuIDs[i] };
+                    refMenuNode = menuNode;
+                } else {
+                    refMenuNode = refMenuNode["subMenuInfo"] = {menuID: menuIDs[i]};
+                }
+            }
+            return menuNode;
+        }
+    }
 
-function getSubMenuInfo( menuID:string ){
-    let MenuIDMap = getMenuIDMap();
+    // 根据curMenuInfo获取上一步的菜单节点
+    getPreviousStepMenuNode( curMenuInfo: IMenuNode ): IMenuNode {
+        return this.getPreNexMenuNode(curMenuInfo, -1);
+    }
 
-    var menuInfo = MenuIDMap[ menuID ];
-    var subMenus;
+    //
+    getNextStepMenuNode(activeMenuInfo: IMenuNode): IMenuNode {
+        return this.getPreNexMenuNode(activeMenuInfo, 1);
+    }
 
-    if( menuInfo ){
-        var subMenu = menuInfo["subMenu"];
-        var i = 0, len = subMenu && subMenu.length || 0;
-        var subMenuInfo;
-
-        if( len ){
-            subMenus = [];
+    /**
+     * @param {StepMenu.IMenuNode} stateTreeMenuInfo
+     * @param {number} stepS 获取preStep -1   nextStep +1
+     * @returns {StepMenu.IMenuNode}
+     */
+    getPreNexMenuNode(stateTreeMenuInfo: IMenuNode, stepS: number) {
+        const menuIDMap = this.menuIDMap;
+        const menuInfo = this.getMenuByMenuNode(stateTreeMenuInfo);
+        let { step} = menuInfo;
+        let menuID = menuInfo.id;
+        if ( step > 1 ) {
+            step += stepS;
         }
 
-        for( ; i < len; i++ ){
-            subMenuInfo = subMenu[ i ];
-            menuID = subMenuInfo.menuID;
-            subMenus.push( getMenuInfoAccordingMenuID(menuID) );
-        }
-    }
-
-    return subMenus;
-}
-
-/**
- * todo menuIDMap 根据 classifyTypeID 分班设置读取不同的配置文件
- * @returns {{subMenu}|any}
- */
-export function getEntry(){
-    let MenuIDMap = getMenuIDMap();
-    return MenuIDMap.entry;
-}
-
-//判读传入的menuNode的激活状态，可不可点击，
-//有子菜单的，子菜单可不可显示。
-
-export function getMenuItemStatus(menuInfo, activeMenuInfo:MenuNode, curMenuInfo:MenuNode){
-    var menuLevelSteps = getMenuLevelStep( menuInfo.menuID );
-    var activeMenuID,activeMenuIDs = [], curMenuID;
-    var activeMenuInfoTemp = activeMenuInfo;
-    var curMenuInfoTemp = curMenuInfo;
-
-    while( activeMenuInfo ){
-        activeMenuID = activeMenuInfo.menuID;
-        activeMenuInfo = activeMenuInfo.subMenuInfo;
-        activeMenuIDs.push( activeMenuID );
-    }
-
-    while( curMenuInfo ){
-        curMenuID = curMenuInfo.menuID;
-        curMenuInfo = curMenuInfo.subMenuInfo;
-    }
-
-    var activeLevelSteps = getMenuLevelStep( activeMenuID );
-    var curLevelSteps = getMenuLevelStep( curMenuID );
-
-    var i = 0, len = menuLevelSteps && menuLevelSteps.length || 0;
-    var activeStates = [];
-    var curStates = [];
-
-    var isActive = false, isCur = false;
-    var activeSteps = activeLevelSteps.join(",");
-    var curSteps = curLevelSteps.join(",");
-    var menuSteps = menuLevelSteps.join(",");
-
-    var isNotSubMenuStepByStep = function(){
-        var isActive = false;
-        var i = 0, len = Math.min( activeLevelSteps.length, menuLevelSteps.length );
-        var equleIdx = -1;
-
-        for( ; i < len; i++ ){
-            if( activeLevelSteps[i] == menuLevelSteps[i] ){
-                equleIdx = i;
-            } else {
+        for ( const key in menuIDMap ) {
+            if (menuIDMap.hasOwnProperty(key) && menuIDMap[key] === step) {
+                menuID = menuIDMap[key].step;
                 break;
             }
         }
-
-
-        if( equleIdx !== -1 ){
-            var activeMenuID = activeMenuIDs[ equleIdx ];
-            var subMenu = getEntry().subMenu;
-            var subIdx = getIndex( subMenu, function(menuInfo){
-                return menuInfo.menuID == activeMenuID;
-            })
-
-            isActive = !subMenu[subIdx]["subMenuStepByStep"];
-        }
-
-        return isActive;
-    };
-
-    isActive = menuSteps <= activeSteps || isNotSubMenuStepByStep();
-    //如果包含的话：
-    var index = curSteps.indexOf(menuSteps);
-
-    if( index === 0 ){
-        isCur = true;
+        const menuNode = this.getMenuNodeByMenuID( menuID );
+        return menuNode;
     }
 
-    return { isActive, isCur };
-}
-
-export function getMenuLevelStep( menuID ){
-    var levelSteps = [];
-
-    if( menuID ){
-        let MenuIDMap = getMenuIDMap();
-        var menuInfo = MenuIDMap[menuID];
-        if(menuInfo){
-            levelSteps.push(menuInfo["step"] );
+    // 通过菜单节点，获取菜单信息
+    getMenuByMenuNode( menuNode: IMenuNode): IMenu {
+        let menuID = menuNode.menuID;
+        while (menuNode.subMenuInfo) {
+            menuNode = menuNode.subMenuInfo;
+            menuID = menuNode.menuID;
         }
-
-        while( menuInfo && menuInfo["parentMenuID"] ){
-            menuInfo = MenuIDMap[menuInfo["parentMenuID"]];
-            levelSteps.push( menuInfo["step"] );
-        }
+        const menuIDMap = this.menuIDMap;
+        return menuIDMap && menuIDMap[menuID];
     }
-    levelSteps = levelSteps.reverse();
-    return levelSteps;
-}
+
+    /**
+     * 通过当前菜单节点，获取目标step的菜单信息
+     * 主要用于当前菜单的上一步、下一步 的菜单信息
+     * @param {StepMenu.IMenuNode} curMenuInfo
+     * @param {number} distanceStep 将当前 step 运算变成 目标step
+     * @returns {StepMenu.IMenu | string}
+     */
+    getMenuByMenuNodeStep( curMenuInfo: IMenuNode, distanceStep: number): IMenu {
+        const menuNode = this.getPreNexMenuNode(curMenuInfo, distanceStep);
+        const menuID = menuNode.menuID;
+        const menuIDMap = this.menuIDMap;
+        const menuInfo: IMenu = menuIDMap && menuIDMap[menuID];
+        return menuInfo;
+    }
+
+    /**
+     * todo 需要想想是否还需要其他字段
+     * 通过progress获取，当前菜单信息
+     * 主要用于在任务列表显示时，需要展示任务进度，1/3
+     * @param {string} progress
+     * @returns {{step: any; allStep: any; progress: string; url: any}}
+     */
+    getProcessInfo( progress: string ) {
+        const menuNode: IMenuNode = this.getMenuNodeByProgress( progress );
+        const menus = this.menus;
+        // 总step num
+        const allStep = menus && menus.length || 0;
+        // 当前所在step
+        const firstLevelMenu: IMenu = menus.find(menu => menu.id === menuNode.menuID);
+        const step = firstLevelMenu && firstLevelMenu.step;
+        const subMenuInfo = this.getMenuByMenuNode(menuNode);
+        const url  =  subMenuInfo && subMenuInfo.url;
+        return { step, allStep, progress, url };
+    }
+
+    // 通过 最远生效的菜单节点，推导出 progress 信息
+    getProcessByActiveMenuInfo( activeMenuInfo: IMenuNode ): string {
+        let effMenuID = activeMenuInfo.menuID;
+        const menuIDs = this.getMenuIDsByMenuID(effMenuID);
+        const progressLevel = this.progressLevel;
+        if (progressLevel > 0 ) {
+            for (let i = 0; i < progressLevel; i++) {
+                effMenuID = menuIDs[progressLevel];
+            }
+        }
+        const menuIDMap = this.menuIDMap;
+        const progress = this.util.recursiveObj(menuIDMap, `${effMenuID}|progressName`) || "";
+        return progress;
+    }
+
+    /**
+     * 一级菜单点击时，需要默认选中其子菜单的第一个
+     * @param menuID
+     * @returns {StepMenu.IMenuNode}
+     */
+    getFirstStepByTopMenuID( menuID ): IMenuNode {
+        const menuIDMap = this.menuIDMap;
+        const subMenus: IMenu[] = this.util.recursiveObj(menuIDMap, `${menuID}|subMenus`) || [];
+        const firstSubMenuID = subMenus[0] && subMenus[0].id;
+        const menuNode = this.getMenuNodeByMenuID(firstSubMenuID);
+        return menuNode;
+    }
+
+    getNextProgress( menuInfo: IMenuInfo ) {
+        let progress = "";
+        const { activeMenuInfo, curMenuInfo } = menuInfo;
+
+        const activeStep = this.getMenuByMenuNode(activeMenuInfo);
+        const curStep = this.getMenuByMenuNode(curMenuInfo);
+
+        if( curStep === activeStep ){
+            activeMenuInfo = getNextMenuStepInfo( activeMenuInfo );
+
+            progress = getProcessByActiveMenuInfo( activeMenuInfo );
+        }
+        return progress;
+    }
 
 
 //获取菜单的激活菜单的第一步：
@@ -262,391 +385,6 @@ export function getFirstActiveMenuInfo():MenuNode{
     return menuNode;
 }
 
-function getSubMenuStep( subMenus, stepCount ){
-    var i = 0, len = subMenus && subMenus.length || 0;
-    var menuInfo;
-
-    for( ; i < len; i++ ){
-        menuInfo = subMenus[i];
-        var { subMenu } = menuInfo;
-
-        if( subMenu ){
-            stepCount = getSubMenuStep( subMenu, stepCount );
-        } else {
-            stepCount++;
-        }
-    }
-
-    return stepCount;
-}
-
-
-export function handleUrlToMenuNdoe( url ):MenuNode{
-    var menuNode:MenuNode;
-
-    if( url ){
-
-        let MenuIDMap = getMenuIDMap();
-
-        var url2MenuID = handleRouteUrl2MenuIDMap();
-        var menuID = url2MenuID[url];
-
-        var menuInfo = MenuIDMap[menuID];
-        var menuIDs = [ menuID ];
-
-        if( menuInfo ){
-            while( menuInfo["parentMenuID"] ){
-                menuID = menuInfo["parentMenuID"];
-                menuIDs.push( menuID );
-                menuInfo = MenuIDMap[menuID];
-            }
-
-            menuIDs = menuIDs.reverse();
-            var refMenuNode;
-
-            for( var i = 0, len = menuIDs.length; i < len; i++ ){
-                if( !refMenuNode ){
-                    menuNode = { menuID: menuIDs[i] };
-                    refMenuNode = menuNode;
-                } else {
-                    refMenuNode = refMenuNode["subMenuInfo"] = {menuID:menuIDs[i]};
-                }
-            }
-        }
-    }
-
-
-    return menuNode;
-}
-
-//var gUrl2MenuIDMap;
-
-export function handleRouteUrl2MenuIDMap(){
-
-    // 获取context里面存储的 gUrl2MenuIDMap
-    //let menuCache = getMenuCache();
-    let gUrl2MenuIDMap = getClassifyTypeIDMenuCacheData(MENUKEYMAP.gUrl2MenuIDMap)//menuCache[MENUKEYMAP.gUrl2MenuIDMap];
-
-    if( isEmptyObject(gUrl2MenuIDMap) ){
-        gUrl2MenuIDMap = {};
-
-        var menus = handleMenuStruct();
-        var i = 0, len = menus && menus.length || 0;
-
-        for( ; i < len; i++ ){
-            handleSubMenuItemUrl( menus[i],gUrl2MenuIDMap );
-        }
-
-        setClassifyTypeIDMenuCacheData(MENUKEYMAP.gUrl2MenuIDMap,gUrl2MenuIDMap);
-        //menuCache[MENUKEYMAP.gUrl2MenuIDMap] = gUrl2MenuIDMap;
-    }
-
-    return gUrl2MenuIDMap;
-}
-
-export function handleSubMenuItemUrl( menuInfo,gUrl2MenuIDMap ){
-    var { subMenu, menuType, url, menuID } = menuInfo;
-
-    if( menuType === 'branch' ){
-        var i = 0, len = subMenu.length;
-
-        for( ; i < len; i++ ){
-            handleSubMenuItemUrl( subMenu[i],gUrl2MenuIDMap );
-        }
-    } else {
-        gUrl2MenuIDMap[url] = menuID;
-    }
-}
-
-
-export function handleProcessToMenuNode( progress ):MenuNode{
-
-    let menuInfo;
-    let menuKey;
-    let MenuIDMap = getMenuIDMap();
-    for(let key in MenuIDMap){
-        if(MenuIDMap[key]["displayName"] == progress){
-            menuInfo = MenuIDMap[key];
-            menuKey = key;
-            break;
-        }
-    }
-    let menuNode;
-    if(menuInfo.menuType == "branch"){
-        menuNode = {
-            menuID:menuKey,
-            subMenuInfo:{
-                menuID:menuInfo.subMenu[0].menuID
-            }
-        }
-    }else{
-        menuNode = {
-            menuID:menuKey
-        }
-    }
-
-
-    return menuNode;
-}
-
-export function getMenuNodeByMenuID( menuID ):MenuNode{
-
-    let MenuIDMap = getMenuIDMap();
-
-    var menuNode;
-    var menuInfo = MenuIDMap[menuID];
-
-    if( menuInfo ){
-        var menuIDs = [ menuID ];
-
-        while( menuInfo["parentMenuID"] ){
-            menuID = menuInfo["parentMenuID"];
-            menuIDs.push( menuID );
-            menuInfo = MenuIDMap[menuID];
-        }
-
-        menuIDs = menuIDs.reverse();
-        var refMenuNode;
-
-        for( var i = 0, len = menuIDs.length; i < len; i++ ){
-            if( !refMenuNode ){
-                menuNode = { menuID: menuIDs[i] };
-                refMenuNode = menuNode;
-            } else {
-                refMenuNode = refMenuNode["subMenuInfo"] = {menuID:menuIDs[i]};
-            }
-        }
-
-        return menuNode;
-    } else {
-        window.console && window.console.log( menuID );
-    }
-
-}
-
-export function getPreviousStep( curMenuInfo ):MenuNode{
-    var menuID = curMenuInfo.menuID;
-
-    while( curMenuInfo.subMenuInfo ){
-        curMenuInfo = curMenuInfo.subMenuInfo;
-        menuID = curMenuInfo.menuID;
-    }
-
-    var menuID2Step = handleMenuIDToMappingStep();
-    var step = menuID2Step[menuID];
-
-    if( step > 1 ){
-        step--;
-    }
-
-    for( var name in menuID2Step ){
-        if( menuID2Step.hasOwnProperty(name) && menuID2Step[name] == step ){
-            menuID = name;
-            break;
-        }
-    }
-
-    var menuNode:MenuNode = getMenuNodeByMenuID( menuID );
-    return menuNode;
-}
-
-//通过menuID找到对应进行的第几步：
-// var globalMenuID2Step, globalStep;
-var globalStep;
-
-export function handleMenuIDToMappingStep(){
-
-    // 获取context里面存储的 globalMenuID2Step
-    //let menuCache = getMenuCache();
-    let globalMenuID2Step = getClassifyTypeIDMenuCacheData(MENUKEYMAP.globalMenuID2Step)//menuCache[MENUKEYMAP.globalMenuID2Step];
-
-    if( isEmptyObject(globalMenuID2Step) ){
-        globalMenuID2Step = {};
-        globalStep = 0;
-        var menus = handleMenuStruct();
-
-        for( var i = 0; i < menus.length; i++ ){
-            getMenuInfoMenuIDToStep( menus[i],globalMenuID2Step );
-        }
-
-        setClassifyTypeIDMenuCacheData(MENUKEYMAP.globalMenuID2Step,globalMenuID2Step);
-        //menuCache[MENUKEYMAP.globalMenuID2Step] = globalMenuID2Step;
-    }
-
-    return globalMenuID2Step;
-}
-
-
-function getMenuInfoMenuIDToStep( menuInfo,globalMenuID2Step ){
-    var { menuType, menuID,subMenu } = menuInfo;
-
-    if( menuType === "branch" ){
-        var i = 0, len = subMenu.length;
-
-        for( ; i < len; i++ ){
-            getMenuInfoMenuIDToStep( subMenu[i],globalMenuID2Step );
-        }
-    } else {
-        globalMenuID2Step[menuID] = ++globalStep;
-    }
-}
-
-export function getNextMenuStepInfo(activeMenuInfo:MenuNode):MenuNode{
-    var menuID = activeMenuInfo.menuID;
-
-    while( activeMenuInfo.subMenuInfo ){
-        activeMenuInfo = activeMenuInfo.subMenuInfo;
-        menuID = activeMenuInfo.menuID;
-    }
-
-    var menuID2Step = handleMenuIDToMappingStep();
-    var step = menuID2Step[ menuID ];
-    step++;
-
-    for( var name in menuID2Step ){
-        if( menuID2Step.hasOwnProperty(name) && menuID2Step[name] == step ){
-            menuID = name;
-            break;
-        }
-    }
-
-    var menuNode:MenuNode = getMenuNodeByMenuID( menuID );
-    return menuNode;
-}
-
-export function getStepByMenuNode( menuNode:MenuNode ){
-    var menuID = menuNode.menuID;
-
-    while( menuNode.subMenuInfo ){
-        menuNode = menuNode.subMenuInfo;
-        menuID = menuNode.menuID;
-    }
-
-    var menuID2Step = handleMenuIDToMappingStep();
-    var step = menuID2Step[menuID];
-
-    return step;
-}
-
-
-function getStepByMenuID( menuID ){
-    var menuID2Step = handleMenuIDToMappingStep();
-    var step = menuID2Step[ menuID ] || 0;
-    return step;
-}
-
-export function getDistanceStepUrlByMenuInfo( curMenuInfo:MenuNode, distanceStep :number){
-    var menuID = curMenuInfo.menuID;
-
-    while( curMenuInfo.subMenuInfo ){
-        curMenuInfo = curMenuInfo.subMenuInfo;
-        menuID = curMenuInfo.menuID;
-    }
-
-    var step = getStepByMenuID( menuID );
-    step += distanceStep;
-    var targetMenuID;
-
-    var menuID2Step = handleMenuIDToMappingStep();
-    for( var menuID in menuID2Step ){
-        if( menuID2Step[menuID] === step && menuID2Step.hasOwnProperty(menuID) ){
-            targetMenuID = menuID;
-        }
-    }
-
-    var url2MenuIDMap = handleRouteUrl2MenuIDMap();
-    var routeUrl;
-
-    if( url2MenuIDMap ){
-        for( var url in url2MenuIDMap ){
-            if( url2MenuIDMap.hasOwnProperty(url) ){
-                if( url2MenuIDMap[url] === targetMenuID ){
-                    routeUrl = url;
-                    break;
-                }
-            }
-        }
-    }
-
-    return routeUrl;
-}
-
-export function getUrlByMenuNode( menuNode:MenuNode ):string{
-    var menuID = menuNode.menuID;
-
-    while( menuNode.subMenuInfo ){
-        menuNode = menuNode.subMenuInfo;
-        menuID = menuNode.menuID;
-    }
-
-    var url2MenuIDMap = handleRouteUrl2MenuIDMap();
-    var targetUrl;
-
-    for( var url in url2MenuIDMap ){
-        if( url2MenuIDMap.hasOwnProperty(url) && url2MenuIDMap[url] === menuID ){
-            targetUrl = url;
-            break;
-        }
-    }
-
-    return targetUrl;
-}
-
-export function getProcessInfo( progress:string ){
-    var menuNode:MenuNode = handleProcessToMenuNode( progress );
-
-    if( !menuNode )
-    {
-        menuNode = getFirstActiveMenuInfo();
-    }
-
-    var entry = getEntry();
-    var { subMenu } = entry;
-    var step;
-    var allStep = subMenu.length;
-
-    var idx = getIndex(subMenu,function( menuInfo ){ return menuInfo.menuID === menuNode.menuID } );
-    step = subMenu[idx]["step"];
-    var url  =  getUrlByMenuNode( menuNode );
-    return { step, allStep, progress, url };
-}
-
-// progress仅是一级菜单的值
-export function getProcessByActiveMenuInfo( activeMenuInfo:MenuNode ){
-    var menuID = activeMenuInfo.menuID;
-    var progress = '';
-
-    let MenuIDMap = getMenuIDMap();
-    for(let key in MenuIDMap){
-        if(key == menuID ){
-            progress = MenuIDMap[key]["displayName"];
-            break;
-        }
-    }
-    return progress;
-
-}
-
-//
-export function getFirstStepByTopMenuID( menuID ):MenuNode{
-    let MenuIDMap = getMenuIDMap();
-    var menuInfo = MenuIDMap[ menuID ];
-    var menuNode:MenuNode;
-
-    if( menuInfo ){
-        var subMenu = menuInfo["subMenu"];
-
-        while( subMenu ){
-            subMenu = subMenu.sort(function(a,b){ return a.step - b.step } );
-            menuInfo = subMenu[ 0 ];
-            subMenu = menuInfo["subMenu"];
-        }
-
-        menuNode = getMenuNodeByMenuID( menuInfo["menuID"] );
-    }
-
-    return menuNode;
-}
 
 /**
  * 获取下一步的progress
