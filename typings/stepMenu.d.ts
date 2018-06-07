@@ -16,6 +16,7 @@ declare namespace StepMenu {
         id: string; // 菜单ID
         name: React.ReactNode; // 菜单名字
         progressName: string; // 显示在progress的名字，默认与name一致，以防像排课系统一样，如 name:查看课表 progressName:总课程表
+        className: string; // menu class
         icon?: string; // 菜单icon img url
         type: menuType; // 菜单类型 branch:父节点有子节点 leaf:是子节点
         subMenus?: IMenu[]; // 子菜单列表

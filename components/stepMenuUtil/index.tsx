@@ -12,7 +12,7 @@ export default class StepMenuUtil {
     private menuIDMap: any; // 以menuID为key的menuMap
     private urlMenuMap: any; // 以 url 为key的menuMap
     private progressLevel: number | 0; // progress指定第几级菜单 0为默认，0代表一级 如排课指定二级菜单、分班云计算指定一级菜单，二级菜单不显示
-    private calculatedLeafStep = 0; // 计算叶子节点个数
+    private calculatedLeafStep = 0; // 根据叶子节点个数，得出
     util = new Util();
 
     static getInstance() {
@@ -128,7 +128,42 @@ export default class StepMenuUtil {
         return { isActive, isCur };
     }
 
-    // 根据menuID获取step的数组 1_2 ：1级菜单下的第一个菜单的子菜单中的第2个菜单
+    /**
+     * 点击下一步时，更新progress activeMenuInfo curMenuInfo 需要跳转的url
+     * @param {StepMenu.IMenuInfo} menuInfo
+     */
+    updateMenuInfoWhenNextStep(menuInfo: IMenuInfo) {
+        let { activeMenuInfo, curMenuInfo } = menuInfo;
+        const nextProgress = this.getNextProgress(menuInfo);
+        const activeMenu = this.getMenuByMenuNode(activeMenuInfo);
+        const activeStep = activeMenu.calculatedLeafStep;
+        const curMenu = this.getMenuByMenuNode( curMenuInfo );
+        const curStep = curMenu.calculatedLeafStep;
+
+        if (curStep === activeStep) {
+            activeMenuInfo = this.getNextStepMenuNode( activeMenuInfo );
+        } else if ( curStep > activeStep ) {
+            activeMenuInfo = this.getNextStepMenuNode( curMenuInfo );
+        }
+        curMenuInfo = this.getNextStepMenuNode( curMenuInfo );
+        const curNextMenu = this.getMenuByMenuNode(curMenuInfo);
+        const jumpUrl = this.util.recursiveObj( curNextMenu, `url`) || "";
+        return {progress: nextProgress, menuInfo: {activeMenuInfo, curMenuInfo }, url: jumpUrl};
+    }
+
+    /**
+     * 点击上一步时，更新 activeMenuInfo curMenuInfo 需要跳转的url
+     * @param {StepMenu.IMenuInfo} menuInfo
+     */
+    updateMenuInfoWhenPrevStep(menuInfo: IMenuInfo) {
+        let {curMenuInfo } = menuInfo;
+        curMenuInfo = this.getPreviousStepMenuNode(curMenuInfo);
+        const curPrevMenu = this.getMenuByMenuNode(curMenuInfo);
+        const jumpUrl = this.util.recursiveObj( curPrevMenu, `url`) || "";
+        return {menuInfo: {activeMenuInfo: menuInfo.activeMenuInfo, curMenuInfo }, url: jumpUrl};
+    }
+
+    // 根据menuID获取step的数组 [1,2] ：1级菜单下的第一个菜单的子菜单中的第2个菜单
     getLevelStepsByMenuID( menuID ) {
         let levelSteps = [];
         if ( menuID ) {
@@ -293,7 +328,7 @@ export default class StepMenuUtil {
      * @param {number} distanceStep 将当前 step 运算变成 目标step
      * @returns {StepMenu.IMenu | string}
      */
-    getMenuByMenuNodeStep( curMenuInfo: IMenuNode, distanceStep: number): IMenu {
+    getMenuByMenuNodeCalculatedStep( curMenuInfo: IMenuNode, distanceStep: number): IMenu {
         const menuNode = this.getPreNexMenuNode(curMenuInfo, distanceStep);
         const menuID = menuNode.menuID;
         const menuIDMap = this.menuIDMap;
@@ -363,75 +398,4 @@ export default class StepMenuUtil {
         }
         return progress;
     }
-
-
-//获取菜单的激活菜单的第一步：
-export function getFirstActiveMenuInfo():MenuNode{
-    var menus = handleMenuStruct();
-    var idx = 0, menuInfo = menus[ idx ];
-    var { menuID, subMenu } = menuInfo;
-    var menuNode:MenuNode = { menuID };
-    var refMenuNode = undefined;
-
-    while( subMenu ){
-        menuInfo = subMenu[ idx ];
-
-        if( !refMenuNode ){
-            refMenuNode = menuNode;
-            refMenuNode["subMenuInfo"] = { menuID: menuInfo.menuID};
-        } else {
-            refMenuNode = refMenuNode["subMenuInfo"] = { menuID: refMenuNode.menuID};
-        }
-
-        subMenu = menuInfo && menuInfo.subMenu || null;
-    }
-
-    return menuNode;
-}
-
-/**
- * 跳转下一步
- */
-//router,location, menuActions, classifyMenuInfo,basicInfoActions,basicInfo successCallback failCallback
-export function handleToNextStepMain(commitObj,props){//逆操作修改 跳转页面
-
-    var {router,location, menuActions, classifyMenuInfo,basicInfoActions,basicInfo, successCallback,failCallback } = props;
-
-    let instanceSubmitManager = InstanceSubmitManager.getInstance();
-
-    var success = function(){
-
-            var { curMenuInfo } = classifyMenuInfo;
-            var menuInfo = $.extend( true, {}, curMenuInfo );
-            menuActions.nextCurMenu( classifyMenuInfo );
-            var url = getDistanceStepUrlByMenuInfo( menuInfo, 1 );
-
-            var query = location && location.query || {};
-
-            router.push({
-                pathname: url,
-                query,
-            });
-            successCallback&&successCallback();
-        },
-        fail = function(){
-            failCallback&&failCallback();
-        };
-
-    //var commitObj = {};
-    var progress = getNextProgress( classifyMenuInfo );
-
-    //let basicInfo = classifyBasicInfo;
-    if(progress && progress != basicInfo["progress"]){
-        basicInfo["progress"] = progress;
-        basicInfoActions.updateBasicInfo(basicInfo);
-        progress && ( commitObj["progress"] = progress );
-    }
-
-    instanceSubmitManager.postDataToServerIfStateChangedWithCommitObj( commitObj, success, fail, fail );
-}
-
-
-
-
 }
